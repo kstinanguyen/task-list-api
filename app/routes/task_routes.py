@@ -2,6 +2,8 @@ from flask import Blueprint, Response, abort, make_response, request
 from ..models.task import Task
 from ..db import db
 from sqlalchemy import asc, desc
+from datetime import datetime, timezone
+from .routes_utilities import validate_model
 
 tasks_bp = Blueprint("tasks_bp", __name__, url_prefix="/tasks")
 
@@ -47,7 +49,7 @@ def get_all_tasks():
 
 @tasks_bp.get("/<task_id>")
 def get_one_task(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
     task_response = {
         "task": task.to_dict()
         }
@@ -55,7 +57,7 @@ def get_one_task(task_id):
 
 @tasks_bp.put("/<task_id>")
 def update_one_task(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
     response_body = request.get_json()
 
     task.title = response_body.get("title")
@@ -69,7 +71,7 @@ def update_one_task(task_id):
 
 @tasks_bp.delete("/<task_id>")
 def delete_one_task(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
 
     db.session.delete(task)
     db.session.commit()
@@ -78,18 +80,35 @@ def delete_one_task(task_id):
         "details": f'Task {task_id} "{task.title}" successfully deleted'
         }
 
-
-#Helper functions
-def validate_task(task_id):
+@tasks_bp.patch("/<task_id>/mark_complete")
+def task_complete(task_id):
     try:
-        task_id = int(task_id)
+        task = validate_model(Task, task_id)
     except ValueError:
-        abort(make_response({"details": f"Task with id {task_id} is invalid"}, 400))
+        abort(make_response({"message": f"{cls.__name__} with {task_id} is invalid"}, 400))
 
-    query = db.select(Task).where(Task.id == task_id)
-    task = db.session.scalar(query)
-    
-    if not task:
-        abort(make_response({"details": f"Task with id {task_id} is not found"}, 404))
-    
-    return task
+    task.is_complete = True
+    task.completed_at = str(datetime.now(timezone.utc))
+
+    db.session.add(task)
+    db.session.commit()
+
+    task_response = {
+        "task": task.to_dict()
+    }
+    return task_response, 200
+
+@tasks_bp.patch("/<task_id>/mark_incomplete")
+def task_incomplete(task_id):
+    task = validate_model(Task, task_id)
+
+    task.is_complete = False
+    task.completed_at = None
+
+    db.session.add(task)
+    db.session.commit()
+
+    task_response = {
+        "task": task.to_dict()
+    }
+    return task_response, 200
