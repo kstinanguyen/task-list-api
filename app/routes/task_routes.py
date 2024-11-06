@@ -1,11 +1,15 @@
-from flask import Blueprint, Response, abort, make_response, request
+from flask import Blueprint, Flask, Response, abort, make_response, request
 from ..models.task import Task
 from ..db import db
 from sqlalchemy import asc, desc
 from datetime import datetime, timezone
 from .routes_utilities import validate_model
+import os
+import requests
+
 
 tasks_bp = Blueprint("tasks_bp", __name__, url_prefix="/tasks")
+SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 
 @tasks_bp.post("")
 def create_task():
@@ -85,13 +89,24 @@ def task_complete(task_id):
     try:
         task = validate_model(Task, task_id)
     except ValueError:
-        abort(make_response({"message": f"{cls.__name__} with {task_id} is invalid"}, 400))
+        abort(make_response({"message": f"Task with {task_id} is invalid"}, 400))
 
     task.is_complete = True
     task.completed_at = str(datetime.now(timezone.utc))
 
     db.session.add(task)
     db.session.commit()
+
+    #Slack bot addition
+    url = "https://slack.com/api/chat.postMessage"
+    headers = {
+        "Authorization": f'Bearer {SLACK_TOKEN}'
+        }
+    payload = {
+        "channel": "C0804BP04NL",
+        "text": f"Someone just completed the task {task.title}"
+    }
+    slack_response = requests.post(url, json=payload, headers=headers)
 
     task_response = {
         "task": task.to_dict()

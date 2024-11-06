@@ -60,7 +60,7 @@ def test_get_task_not_found(client):
     # Assert
     assert response.status_code == 404
     assert response_body == {
-        "details": f"Task with id 1 is not found"
+        "details": f"Task with id 1 does not exist"
         }
 
 
@@ -129,7 +129,7 @@ def test_update_task_not_found(client):
     # Assert
     assert response.status_code == 404
     assert response_body == {
-        "details": "Task with id 1 is not found"
+        "details": "Task with id 1 does not exist"
     }
 
 
@@ -157,7 +157,7 @@ def test_delete_task_not_found(client):
     # Assert
     assert response.status_code == 404
     assert response_body == {
-        "details": "Task with id 1 is not found"
+        "details": "Task with id 1 does not exist"
         }
 
     assert Task.query.all() == []
