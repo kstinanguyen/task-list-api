@@ -1,9 +1,8 @@
-from flask import Blueprint, Flask, Response, abort, make_response, request
+from flask import Blueprint, abort, make_response, request
 from ..models.task import Task
 from ..db import db
-from sqlalchemy import asc, desc
 from datetime import datetime, timezone
-from .routes_utilities import validate_model
+from .routes_utilities import validate_model, create_model, get_models_with_filters
 import os
 import requests
 
@@ -14,23 +13,13 @@ SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 @tasks_bp.post("")
 def create_task():
     response_body = request.get_json()
-    title = response_body.get("title")
-    description = response_body.get("description")
-    completed_at = response_body.get("completed_at")
 
-    if not title or not description:
+    if not response_body.get("title") or not response_body.get("description"):
         abort(make_response({"details": "Invalid data"}, 400))
 
-    new_task = Task(title=title, description=description, completed_at=completed_at)
-
-    db.session.add(new_task)
-    db.session.commit()
-
-    response = {
-        "task": new_task.to_dict()
-        }
-
-    return response, 201
+    return {
+        "task": create_model(Task, response_body)
+        }, 201
 
 @tasks_bp.get("")
 def get_all_tasks():

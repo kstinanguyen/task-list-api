@@ -60,7 +60,7 @@ def test_get_task_not_found(client):
     # Assert
     assert response.status_code == 404
     assert response_body == {
-        "details": f"Task with id 1 does not exist"
+        "details": "Task with id 1 does not exist"
         }
 
 
